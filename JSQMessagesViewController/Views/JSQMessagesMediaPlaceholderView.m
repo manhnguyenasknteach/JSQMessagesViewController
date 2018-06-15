@@ -38,6 +38,18 @@
     return view;
 }
 
++ (instancetype)viewWithAudioActive
+{
+    UIColor *lightGrayColor = [UIColor grayColor];
+    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhite];
+    spinner.color = [lightGrayColor jsq_colorByDarkeningColorWithValue:0.4f];
+    
+    JSQMessagesMediaPlaceholderView *view = [[JSQMessagesMediaPlaceholderView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 200.0f, 120.0f)
+                                                                                   backgroundColor:lightGrayColor
+                                                                             activityIndicatorView:spinner];
+    return view;
+}
+
 + (instancetype)viewWithAttachmentIcon
 {
     UIColor *lightGrayColor = [UIColor jsq_messageBubbleLightGrayColor];

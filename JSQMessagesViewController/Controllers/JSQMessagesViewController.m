@@ -201,6 +201,8 @@ JSQMessagesKeyboardControllerDelegate>
     self.showLoadEarlierMessagesHeader = NO;
 
     self.topContentAdditionalInset = 0.0f;
+    
+    self.defaultKeyboardHeight = 216;
 
     [self jsq_updateCollectionViewInsets];
 
@@ -226,6 +228,15 @@ JSQMessagesKeyboardControllerDelegate>
 
     [_keyboardController endListeningForKeyboard];
     _keyboardController = nil;
+}
+
+#pragma mark - Getters
+- (BOOL)displayingToolBar {
+    return self.toolbarBottomLayoutGuide.constant > 0;
+}
+
+-(CGFloat)toolbarBottomLayout {
+    return self.toolbarBottomLayoutGuide.constant;
 }
 
 #pragma mark - Setters
@@ -573,7 +584,12 @@ JSQMessagesKeyboardControllerDelegate>
     }
     else {
         id<JSQMessageMediaData> messageMedia = [messageItem media];
-        cell.mediaView = [messageMedia mediaView] ?: [messageMedia mediaPlaceholderView];
+        BOOL isMediaAudioMessage = [messageItem isMediaAudioMessage];
+        if(isMediaAudioMessage){
+            cell.mediaView = [messageMedia mediaView] ?: [messageMedia mediaudioPlaceholderView];
+        }else{
+            cell.mediaView = [messageMedia mediaView] ?: [messageMedia mediaPlaceholderView];
+        }
         NSParameterAssert(cell.mediaView != nil);
     }
 
@@ -904,24 +920,26 @@ JSQMessagesKeyboardControllerDelegate>
 
 - (void)keyboardController:(JSQMessagesKeyboardController *)keyboardController keyboardDidChangeFrame:(CGRect)keyboardFrame
 {
-    if (![self.inputToolbar.contentView.textView isFirstResponder] && self.toolbarBottomLayoutGuide.constant == 0.0) {
+    if ((![self.inputToolbar.contentView.textView isFirstResponder] && self.toolbarBottomLayoutGuide.constant == 0.0) || self.bottomMenuSelected) {
         return;
     }
-
+    
+    self.defaultKeyboardHeight = keyboardFrame.size.height;
+    
     CGFloat heightFromBottom = CGRectGetMaxY(self.collectionView.frame) - CGRectGetMinY(keyboardFrame);
 
     heightFromBottom = MAX(0.0, heightFromBottom);
-
     [self jsq_setToolbarBottomLayoutGuideConstant:heightFromBottom];
+ 
 }
 
 - (void)jsq_setToolbarBottomLayoutGuideConstant:(CGFloat)constant
 {
-    self.toolbarBottomLayoutGuide.constant = constant;
-    [self.view setNeedsUpdateConstraints];
-    [self.view layoutIfNeeded];
+        self.toolbarBottomLayoutGuide.constant = constant;
+        [self.view setNeedsUpdateConstraints];
+        [self.view layoutIfNeeded];
 
-    [self jsq_updateCollectionViewInsets];
+        [self jsq_updateCollectionViewInsets];
 }
 
 - (void)jsq_updateKeyboardTriggerPoint

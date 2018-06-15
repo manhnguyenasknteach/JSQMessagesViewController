@@ -51,6 +51,8 @@
  */
 @property (assign, nonatomic, readonly) BOOL isMediaMessage;
 
+@property (assign, nonatomic) BOOL isMediaAudioMessage;
+
 /**
  *  Returns the body text of the message, or `nil` if the message is a media message.
  *  That is, if `isMediaMessage` is equal to `YES` then this value will be `nil`.

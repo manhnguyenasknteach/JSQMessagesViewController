@@ -1,4 +1,4 @@
-//
+        //
 //  Created by Jesse Squires
 //  http://www.jessesquires.com
 //
@@ -17,14 +17,20 @@
 //
 
 #import "JSQMediaItem.h"
-
+#import "JSQAudioMediaItem.h"
 #import "JSQMessagesMediaPlaceholderView.h"
 #import "JSQMessagesMediaViewBubbleImageMasker.h"
-
+#import "JSQMessageMediaData.h"
 
 @interface JSQMediaItem ()
 
 @property (strong, nonatomic) UIView *cachedPlaceholderView;
+
+@property (strong, nonatomic) UIButton *playButton;
+
+@property (strong, nonatomic) UIProgressView *progressView;
+@property (strong, nonatomic) UILabel *progressLabel;
+@property (strong, nonatomic) NSTimer *progressTimer;
 
 @end
 
@@ -92,11 +98,19 @@
     return CGSizeMake(210.0f, 150.0f);
 }
 
+- (UIView *)mediaudioPlaceholderView
+{
+    UIView *view = [self mediaViewPlacholder];
+    self.cachedPlaceholderView = view;
+    
+    return self.cachedPlaceholderView;
+}
+
 - (UIView *)mediaPlaceholderView
 {
     if (self.cachedPlaceholderView == nil) {
         CGSize size = [self mediaViewDisplaySize];
-        UIView *view = [JSQMessagesMediaPlaceholderView viewWithActivityIndicator];
+        UIView *view = [JSQMessagesMediaPlaceholderView viewWithAudioActive];
         view.frame = CGRectMake(0.0f, 0.0f, size.width, size.height);
         [JSQMessagesMediaViewBubbleImageMasker applyBubbleImageMaskToMediaView:view isOutgoing:self.appliesMediaViewMaskAsOutgoing];
         self.cachedPlaceholderView = view;

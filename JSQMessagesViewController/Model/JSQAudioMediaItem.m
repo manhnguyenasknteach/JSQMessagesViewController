@@ -25,18 +25,13 @@
 #import "UIColor+JSQMessages.h"
 
 
+
 @interface JSQAudioMediaItem ()
 
 @property (strong, nonatomic) UIView *cachedMediaView;
-
-@property (strong, nonatomic) UIButton *playButton;
-
-@property (strong, nonatomic) UIProgressView *progressView;
-@property (strong, nonatomic) UILabel *progressLabel;
 @property (strong, nonatomic) NSTimer *progressTimer;
-
-@property (strong, nonatomic) AVAudioPlayer *audioPlayer;
-
+@property (nonatomic, strong) AFSoundQueue *queue;
+@property (nonatomic, strong) NSMutableArray *items;
 @end
 
 
@@ -53,6 +48,7 @@
         _cachedMediaView = nil;
         _audioData = [audioData copy];
         _audioViewAttributes = audioViewAttributes;
+
     }
     return self;
 }
@@ -102,7 +98,7 @@
 
 - (void)setAudioDataWithUrl:(NSURL *)audioURL
 {
-    _audioData = [NSData dataWithContentsOfURL:audioURL];
+    self.urlAudio = audioURL;
     [self clearCachedMediaViews];
 }
 
@@ -137,6 +133,20 @@
                                             forDuration:self.audioPlayer.duration];
     }
 }
+- (void)updateProgess:(NSTimeInterval)currentTime forDuration:(NSTimeInterval)duration{
+    self.playButton.selected = YES;
+    float interval = (float)currentTime/ (float)duration;
+    self.currentPlayer = currentTime;
+    self.progressView.progress = interval;
+    self.progressLabel.text = [self timestampString:duration - currentTime forDuration:duration];
+}
+
+- (void)resetProgess{
+    self.playButton.selected = NO;
+    self.progressView.progress = 0;
+    self.progressLabel.text = [self timestampString:self.durationPlayer forDuration:self.durationPlayer];
+    self.currentPlayer = 0;
+}
 
 - (NSString *)timestampString:(NSTimeInterval)currentTime forDuration:(NSTimeInterval)duration
 {
@@ -159,39 +169,37 @@
     return [NSString stringWithFormat:@"%d:%02d:%02d", (int)currentTime / 3600, (int)currentTime / 60, (int)currentTime % 60];
 }
 
-- (void)onPlayButton:(UIButton *)sender
-{
-    NSString *category = [AVAudioSession sharedInstance].category;
-    AVAudioSessionCategoryOptions options = [AVAudioSession sharedInstance].categoryOptions;
+- (void)onStreamAudioButton:(UIButton *)sender {
+    [self.playButton setUserInteractionEnabled:NO];
+    [self clickPlayButton];
+    [self.playButton setUserInteractionEnabled:YES];
+}
 
-    if (category != self.audioViewAttributes.audioCategory || options != self.audioViewAttributes.audioCategoryOptions) {
-        NSError *error = nil;
-        [[AVAudioSession sharedInstance] setCategory:self.audioViewAttributes.audioCategory
-                                         withOptions:self.audioViewAttributes.audioCategoryOptions
-                                               error:&error];
-        if (self.delegate) {
-            [self.delegate audioMediaItem:self didChangeAudioCategory:category options:options error:error];
-        }
-    }
-
-    if (self.audioPlayer.playing) {
+- (void)clickPlayButton{
+    
+    if( self.playButton.selected){
         self.playButton.selected = NO;
-        [self stopProgressTimer];
-        [self.audioPlayer stop];
+        [self.delegate pauseAudio:self];
+    }else{
+        self.playButton.selected = YES;
+        [self.delegate playAudio:self];
     }
-    else {
-        // fade the button from play to pause
-        [UIView transitionWithView:self.playButton
-                          duration:.2
-                           options:UIViewAnimationOptionTransitionCrossDissolve
-                        animations:^{
-                            self.playButton.selected = YES;
-                        }
-                        completion:nil];
+}
+- (void)resetPlayer{
+    self.playButton.selected = NO;
+    self.progressView.progress = 0;
+    self.progressLabel.text = [self timestampString:0 forDuration:0];
+    self.currentPlayer = 0;
+    [_player pause];
+    [_player restart];
+}
 
-        [self startProgressTimer];
-        [self.audioPlayer play];
+
+- (BOOL)isLocalFile:(NSURL*)url{
+    if ([[url scheme] isEqualToString:@"file"]) {
+        return true;
     }
+    return false;
 }
 
 #pragma mark - AVAudioPlayerDelegate
@@ -218,7 +226,7 @@
 
 - (CGSize)mediaViewDisplaySize
 {
-    return CGSizeMake(160.0f,
+    return CGSizeMake(210.0f,
                       self.audioViewAttributes.controlInsets.top +
                       self.audioViewAttributes.controlInsets.bottom +
                       self.audioViewAttributes.playButtonImage.size.height);
@@ -226,92 +234,93 @@
 
 - (UIView *)mediaView
 {
-    if (self.audioData && self.cachedMediaView == nil) {
-        if (self.audioData) {
-            self.audioPlayer = [[AVAudioPlayer alloc] initWithData:self.audioData error:nil];
-            self.audioPlayer.delegate = self;
-        }
-
-        // reverse the insets based on the message direction
-        CGFloat leftInset, rightInset;
-        if (self.appliesMediaViewMaskAsOutgoing) {
-            leftInset = self.audioViewAttributes.controlInsets.left;
-            rightInset = self.audioViewAttributes.controlInsets.right;
-        } else {
-            leftInset = self.audioViewAttributes.controlInsets.right;
-            rightInset = self.audioViewAttributes.controlInsets.left;
-        }
-        
-        // create container view for the various controls
-        CGSize size = [self mediaViewDisplaySize];
-        UIView * playView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, size.width, size.height)];
-        playView.backgroundColor = self.audioViewAttributes.backgroundColor;
-        playView.contentMode = UIViewContentModeCenter;
-        playView.clipsToBounds = YES;
-
-        // create the play button
-        CGRect buttonFrame = CGRectMake(leftInset,
-                                        self.audioViewAttributes.controlInsets.top,
-                                        self.audioViewAttributes.playButtonImage.size.width,
-                                        self.audioViewAttributes.playButtonImage.size.height);
-        
-        self.playButton = [[UIButton alloc] initWithFrame:buttonFrame];
-        [self.playButton setImage:self.audioViewAttributes.playButtonImage forState:UIControlStateNormal];
-        [self.playButton setImage:self.audioViewAttributes.pauseButtonImage forState:UIControlStateSelected];
-        [self.playButton addTarget:self action:@selector(onPlayButton:) forControlEvents:UIControlEventTouchUpInside];
-        [playView addSubview:self.playButton];
-
-        // create a label to show the duration / elapsed time
-        NSString *durationString = [self timestampString:self.audioPlayer.duration
-                                             forDuration:self.audioPlayer.duration];
-        NSString *maxWidthString = [@"" stringByPaddingToLength:[durationString length] withString:@"0" startingAtIndex:0];
-
-        // this is cheesy, but it centers the progress bar without extra space and
-        // without causing it to wiggle from side to side as the label text changes
-        CGSize labelSize = CGSizeMake(36, 18);
-        if ([durationString length] < 4) {
-            labelSize = CGSizeMake(18,18);
-        }
-        else if ([durationString length] < 5) {
-            labelSize = CGSizeMake(24,18);
-        }
-        else if ([durationString length] < 6) {
-            labelSize = CGSizeMake(30, 18);
-        }
-
-        CGRect labelFrame = CGRectMake(size.width - labelSize.width - rightInset,
-                                       self.audioViewAttributes.controlInsets.top, labelSize.width, labelSize.height);
-        self.progressLabel = [[UILabel alloc] initWithFrame:labelFrame];
-        self.progressLabel.textAlignment = NSTextAlignmentLeft;
-        self.progressLabel.adjustsFontSizeToFitWidth = YES;
-        self.progressLabel.textColor = self.audioViewAttributes.tintColor;
-        self.progressLabel.font = self.audioViewAttributes.labelFont;
-        self.progressLabel.text = maxWidthString;
-
-        // sizeToFit adjusts the frame's height to the font
-        [self.progressLabel sizeToFit];
-        labelFrame.origin.x = size.width - self.progressLabel.frame.size.width - rightInset;
-        labelFrame.origin.y =  ((size.height - self.progressLabel.frame.size.height) / 2);
-        labelFrame.size.width = self.progressLabel.frame.size.width;
-        labelFrame.size.height =  self.progressLabel.frame.size.height;
-        self.progressLabel.frame = labelFrame;
-        self.progressLabel.text = durationString;
-        [playView addSubview:self.progressLabel];
-
-        // create a progress bar
-        self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-        CGFloat xOffset = self.playButton.frame.origin.x + self.playButton.frame.size.width + self.audioViewAttributes.controlPadding;
-        CGFloat width = labelFrame.origin.x - xOffset - self.audioViewAttributes.controlPadding;
-        self.progressView.frame = CGRectMake(xOffset, (size.height - self.progressView.frame.size.height) / 2,
-                                             width, self.progressView.frame.size.height);
-        self.progressView.tintColor = self.audioViewAttributes.tintColor;
-        [playView addSubview:self.progressView];
-
-        [JSQMessagesMediaViewBubbleImageMasker applyBubbleImageMaskToMediaView:playView isOutgoing:self.appliesMediaViewMaskAsOutgoing];
-        self.cachedMediaView = playView;
-    }
-
     return self.cachedMediaView;
+}
+
+- (UIView *)mediaViewPlacholder{
+    
+    // reverse the insets based on the message direction
+    _currentPlayer = 0;
+    CGFloat leftInset, rightInset;
+    if (self.appliesMediaViewMaskAsOutgoing) {
+        leftInset = self.audioViewAttributes.controlInsets.left;
+        rightInset = self.audioViewAttributes.controlInsets.right;
+    } else {
+        leftInset = self.audioViewAttributes.controlInsets.right;
+        rightInset = self.audioViewAttributes.controlInsets.left;
+    }
+    
+    // create container view for the various controls
+    CGSize size = [self mediaViewDisplaySize];
+    UIView * playView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, size.width, size.height)];
+    playView.backgroundColor = self.audioViewAttributes.backgroundColor;
+    playView.contentMode = UIViewContentModeCenter;
+    playView.clipsToBounds = YES;
+    
+    // create the play button
+    CGRect buttonFrame = CGRectMake(leftInset - 4,self.audioViewAttributes.controlInsets.top - 4,
+                                    self.audioViewAttributes.playButtonImage.size.width + 8,
+                                    self.audioViewAttributes.playButtonImage.size.height + 8);
+    
+    self.playButton = [[UIButton alloc] initWithFrame:buttonFrame];
+    self.playButton.imageEdgeInsets = UIEdgeInsetsMake(4, 8, 4, 0);
+    [self.playButton setImage:self.audioViewAttributes.playButtonImage forState:UIControlStateNormal];
+    [self.playButton setImage:self.audioViewAttributes.pauseButtonImage forState:UIControlStateSelected];
+    [self.playButton addTarget:self action:@selector(onStreamAudioButton:) forControlEvents:UIControlEventTouchUpInside];
+    [playView addSubview:self.playButton];
+    
+    // create a label to show the duration / elapsed time
+    NSString *durationString = [self timestampString:self.durationPlayer
+                                         forDuration:self.durationPlayer];
+    NSString *maxWidthString = [@"" stringByPaddingToLength:[durationString length] withString:@"0" startingAtIndex:0];
+    
+    // this is cheesy, but it centers the progress bar without extra space and
+    // without causing it to wiggle from side to side as the label text changes
+    CGSize labelSize = CGSizeMake(40, 18);
+    if ([durationString length] < 4) {
+        labelSize = CGSizeMake(20,18);
+    }
+    else if ([durationString length] < 5) {
+        labelSize = CGSizeMake(26,18);
+    }
+    else if ([durationString length] < 6) {
+        labelSize = CGSizeMake(32, 18);
+    }
+    
+    CGRect labelFrame = CGRectMake(size.width - labelSize.width - rightInset - 4,self.audioViewAttributes.controlInsets.top, labelSize.width, labelSize.height);
+    self.progressLabel = [[UILabel alloc] initWithFrame:labelFrame];
+    self.progressLabel.textAlignment = NSTextAlignmentCenter;
+    self.progressLabel.adjustsFontSizeToFitWidth = YES;
+    self.progressLabel.textColor = [UIColor whiteColor];
+    self.progressLabel.font = self.audioViewAttributes.labelFont;
+    self.progressLabel.text = maxWidthString;
+    self.progressLabel.backgroundColor = self.audioViewAttributes.tintColor;
+    self.progressLabel.clipsToBounds = true;
+    self.progressLabel.layer.cornerRadius = 6;
+    
+    // sizeToFit adjusts the frame's height to the font
+    [self.progressLabel sizeToFit];
+    labelFrame.origin.x = size.width - self.progressLabel.frame.size.width - rightInset - 4 ;
+    labelFrame.origin.y =  ((size.height - self.progressLabel.frame.size.height) / 2);
+    labelFrame.size.width = self.progressLabel.frame.size.width;
+    labelFrame.size.height =  self.progressLabel.frame.size.height;
+    self.progressLabel.frame = labelFrame;
+    self.progressLabel.text = durationString;
+    [playView addSubview:self.progressLabel];
+    
+    // create a progress bar
+    self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+    [self.progressView setTransform:CGAffineTransformMakeScale(1.0, 1.0)];
+    CGFloat xOffset = self.playButton.frame.origin.x + self.playButton.frame.size.width + self.audioViewAttributes.controlPadding - 3;
+    self.progressView.trackTintColor = [UIColor colorWithRed:0.9882352941 green:0.646905992 blue:0.9740496174 alpha:1.0];
+    CGFloat width = labelFrame.origin.x - xOffset;
+    self.progressView.frame = CGRectMake(xOffset, (size.height - self.progressView.frame.size.height) / 2,width, self.progressView.frame.size.height);
+    self.progressView.tintColor = self.audioViewAttributes.tintColor;
+    [playView addSubview:self.progressView];
+    
+    [JSQMessagesMediaViewBubbleImageMasker applyBubbleImageMaskToMediaView:playView isOutgoing:self.appliesMediaViewMaskAsOutgoing];
+    self.cachedMediaView = playView;
+    return playView;
 }
 
 - (NSUInteger)mediaHash

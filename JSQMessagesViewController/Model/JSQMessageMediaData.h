@@ -45,6 +45,9 @@
  */
 - (UIView *)mediaView;
 
+
+- (UIView *)mediaViewPlacholder;
+
 /**
  *  @return The frame size for the mediaView when displayed in a `JSQMessagesCollectionViewCell`. 
  *
@@ -70,6 +73,7 @@
  */
 - (UIView *)mediaPlaceholderView;
 
+
 /**
  *  @return An integer that can be used as a table address in a hash table structure.
  *
@@ -77,5 +81,7 @@
  *  This value is used to cache layout information in the collection view.
  */
 - (NSUInteger)mediaHash;
+
+- (UIView *)mediaudioPlaceholderView;
 
 @end

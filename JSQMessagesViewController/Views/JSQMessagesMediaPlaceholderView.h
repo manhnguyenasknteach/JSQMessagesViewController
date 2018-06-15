@@ -52,6 +52,7 @@
  */
 + (instancetype)viewWithActivityIndicator;
 
++ (instancetype)viewWithAudioActive;
 /**
  *  Creates a media placeholder view object with a light gray background and
  *  a centered paperclip attachment icon.

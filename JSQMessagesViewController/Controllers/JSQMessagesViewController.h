@@ -156,6 +156,14 @@
  */
 @property (assign, nonatomic) BOOL showTypingIndicator;
 
+@property (assign, nonatomic) BOOL bottomMenuSelected;
+
+@property (assign, nonatomic) CGFloat defaultKeyboardHeight;
+
+@property (assign, nonatomic) BOOL displayingToolBar;
+
+@property (assign, nonatomic) CGFloat toolbarBottomLayout;
+
 /**
  *  Specifies whether or not the view controller should show the "load earlier messages" header view.
  *
@@ -171,6 +179,11 @@
  *  @discussion Use this property to adjust the top content inset to account for a custom subview at the top of your view controller.
  */
 @property (assign, nonatomic) CGFloat topContentAdditionalInset;
+
+/**
+ Bottom constraint
+ */
+@property (assign, nonatomic) CGFloat toolbarBottomConstant;
 
 #pragma mark - Class methods
 
@@ -324,4 +337,8 @@
  */
 - (void)didReceiveMenuWillHideNotification:(NSNotification *)notification;
 
+/**
+ Move toolbar
+ */
+- (void)jsq_setToolbarBottomLayoutGuideConstant:(CGFloat)constant;
 @end

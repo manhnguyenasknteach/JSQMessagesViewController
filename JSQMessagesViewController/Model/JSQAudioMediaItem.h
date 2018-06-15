@@ -18,7 +18,7 @@
 
 #import "JSQMediaItem.h"
 #import "JSQAudioMediaViewAttributes.h"
-
+#import "AFSoundManager.h"
 #import <AVFoundation/AVFoundation.h>
 
 @class JSQAudioMediaItem;
@@ -34,6 +34,8 @@ NS_ASSUME_NONNULL_BEGIN
 didChangeAudioCategory:(NSString *)category
                options:(AVAudioSessionCategoryOptions)options
                  error:(nullable NSError *)error;
+- (void)playAudio:(JSQAudioMediaItem *)media;
+- (void)pauseAudio:(JSQAudioMediaItem *)media;
 
 @end
 
@@ -113,7 +115,22 @@ didChangeAudioCategory:(NSString *)category
  *  @param audioURL A File URL containing the location of the audio data.
  */
 - (void)setAudioDataWithUrl:(nonnull NSURL *)audioURL;
-
+- (void)clickPlayButton;
+- (void)resetPlayer;
+- (void)resetProgess;
+- (UIView *)mediaView;
+- (UIView *)mediaViewPlacholder;
+- (NSString *)timestampString:(NSTimeInterval)currentTime forDuration:(NSTimeInterval)duration;
+- (void)updateProgess:(NSTimeInterval)currentTime forDuration:(NSTimeInterval)duration;
+- (BOOL)isLocalFile:(NSURL*)url;
+@property (strong, nonatomic) AFSoundPlayback *player;
+@property (strong, nonatomic) AVAudioPlayer *audioPlayer;
+@property (strong, nonatomic) UIButton *playButton;
+@property (strong, nonatomic) NSURL *urlAudio;
+@property (strong, nonatomic) UIProgressView *progressView;
+@property (strong, nonatomic) UILabel *progressLabel;
+@property (nonatomic, assign) NSTimeInterval currentPlayer;
+@property (nonatomic, assign) NSTimeInterval durationPlayer;
 @end
 
 NS_ASSUME_NONNULL_END

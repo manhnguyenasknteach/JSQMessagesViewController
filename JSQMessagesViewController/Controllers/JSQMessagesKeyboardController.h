@@ -85,7 +85,7 @@ FOUNDATION_EXPORT NSString * const JSQMessagesKeyboardControllerUserInfoKeyKeybo
 /**
  *  The view in which the keyboard will be shown. This should be the parent or a sibling of `textView`.
  */
-@property (weak, nonatomic, readonly) UIView *contextView;
+@property (weak, nonatomic) UIView *contextView;
 
 /**
  *  The pan gesture recognizer responsible for handling user interaction with the system keyboard.
@@ -103,7 +103,7 @@ FOUNDATION_EXPORT NSString * const JSQMessagesKeyboardControllerUserInfoKeyKeybo
 /**
  *  Returns `YES` if the keyboard is currently visible, `NO` otherwise.
  */
-@property (assign, nonatomic, readonly) BOOL keyboardIsVisible;
+@property (assign, nonatomic) BOOL keyboardIsVisible;
 
 /**
  *  Returns the current frame of the keyboard if it is visible, otherwise `CGRectNull`.
