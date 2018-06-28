@@ -37,6 +37,7 @@
 + (JSQMessagesAvatarImage *)avatarImageWithImage:(UIImage *)image diameter:(NSUInteger)diameter
 {
     UIImage *avatar = [JSQMessagesAvatarImageFactory circularAvatarImage:image withDiameter:diameter];
+    avatar.accessibilityIdentifier = image.accessibilityIdentifier;
     UIImage *highlightedAvatar = [JSQMessagesAvatarImageFactory circularAvatarHighlightedImage:image withDiameter:diameter];
 
     return [[JSQMessagesAvatarImage alloc] initWithAvatarImage:avatar

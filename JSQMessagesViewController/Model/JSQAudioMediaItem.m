@@ -42,13 +42,13 @@
 - (instancetype)initWithData:(NSData *)audioData audioViewAttributes:(JSQAudioMediaViewAttributes *)audioViewAttributes
 {
     NSParameterAssert(audioViewAttributes != nil);
-
+    
     self = [super init];
     if (self) {
         _cachedMediaView = nil;
         _audioData = [audioData copy];
         _audioViewAttributes = audioViewAttributes;
-
+        
     }
     return self;
 }
@@ -78,12 +78,12 @@
 {
     [_audioPlayer stop];
     _audioPlayer = nil;
-
+    
     _playButton = nil;
     _progressView = nil;
     _progressLabel = nil;
     [self stopProgressTimer];
-
+    
     _cachedMediaView = nil;
     [super clearCachedMediaViews];
 }
@@ -165,7 +165,7 @@
     else if (duration < 3600) {
         return [NSString stringWithFormat:@"%d:%02d", (int)currentTime / 60, (int)currentTime % 60];
     }
-
+    
     return [NSString stringWithFormat:@"%d:%02d:%02d", (int)currentTime / 3600, (int)currentTime / 60, (int)currentTime % 60];
 }
 
@@ -206,7 +206,7 @@
 
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player
                        successfully:(BOOL)flag {
-
+    
     // set progress to full, then fade back to the default state
     [self stopProgressTimer];
     self.progressView.progress = 1;
@@ -287,19 +287,23 @@
         labelSize = CGSizeMake(32, 18);
     }
     
-    CGRect labelFrame = CGRectMake(size.width - labelSize.width - rightInset - 4,self.audioViewAttributes.controlInsets.top, labelSize.width, labelSize.height);
+    CGRect labelFrame = CGRectMake(size.width - labelSize.width - rightInset - 4,self.audioViewAttributes.controlInsets.top, labelSize.width + 4, labelSize.height - 2);
     self.progressLabel = [[UILabel alloc] initWithFrame:labelFrame];
     self.progressLabel.textAlignment = NSTextAlignmentCenter;
     self.progressLabel.adjustsFontSizeToFitWidth = YES;
-    self.progressLabel.textColor = [UIColor whiteColor];
     self.progressLabel.font = self.audioViewAttributes.labelFont;
     self.progressLabel.text = maxWidthString;
     self.progressLabel.backgroundColor = self.audioViewAttributes.tintColor;
     self.progressLabel.clipsToBounds = true;
-    self.progressLabel.layer.cornerRadius = 6;
+    self.progressLabel.layer.cornerRadius = labelSize.height/2 - 1;
     
+    if (self.appliesMediaViewMaskAsOutgoing) {
+        self.progressLabel.textColor = [UIColor colorWithRed:53/255 green:47/255 blue:53/255 alpha:1.0];
+    }else{
+        self.progressLabel.textColor = [UIColor whiteColor];
+    }
     // sizeToFit adjusts the frame's height to the font
-    [self.progressLabel sizeToFit];
+    //[self.progressLabel sizeToFit];
     labelFrame.origin.x = size.width - self.progressLabel.frame.size.width - rightInset - 4 ;
     labelFrame.origin.y =  ((size.height - self.progressLabel.frame.size.height) / 2);
     labelFrame.size.width = self.progressLabel.frame.size.width;
@@ -312,7 +316,11 @@
     self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     [self.progressView setTransform:CGAffineTransformMakeScale(1.0, 1.0)];
     CGFloat xOffset = self.playButton.frame.origin.x + self.playButton.frame.size.width + self.audioViewAttributes.controlPadding - 3;
-    self.progressView.trackTintColor = [UIColor colorWithRed:0.9882352941 green:0.646905992 blue:0.9740496174 alpha:1.0];
+    if (self.appliesMediaViewMaskAsOutgoing) {
+        self.progressView.trackTintColor = [UIColor colorWithRed:0.9764705896 green:0.9569521522 blue:0.7953972457 alpha:1.0];
+    }else{
+        self.progressView.trackTintColor = [UIColor colorWithRed:0.9882352941 green:0.646905992 blue:0.9740496174 alpha:1.0];
+    }
     CGFloat width = labelFrame.origin.x - xOffset;
     self.progressView.frame = CGRectMake(xOffset, (size.height - self.progressView.frame.size.height) / 2,width, self.progressView.frame.size.height);
     self.progressView.tintColor = self.audioViewAttributes.tintColor;
@@ -322,7 +330,6 @@
     self.cachedMediaView = playView;
     return playView;
 }
-
 - (NSUInteger)mediaHash
 {
     return self.hash;
@@ -335,12 +342,12 @@
     if (![super isEqual:object]) {
         return NO;
     }
-
+    
     JSQAudioMediaItem *audioItem = (JSQAudioMediaItem *)object;
     if (self.audioData && ![self.audioData isEqualToData:audioItem.audioData]) {
         return NO;
     }
-
+    
     return YES;
 }
 

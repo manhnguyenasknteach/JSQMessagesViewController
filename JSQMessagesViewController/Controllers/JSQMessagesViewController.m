@@ -595,10 +595,10 @@ JSQMessagesKeyboardControllerDelegate>
 
     BOOL needsAvatar = YES;
     if (isOutgoingMessage && CGSizeEqualToSize(collectionView.collectionViewLayout.outgoingAvatarViewSize, CGSizeZero)) {
-        needsAvatar = NO;
+        needsAvatar = YES;
     }
     else if (!isOutgoingMessage && CGSizeEqualToSize(collectionView.collectionViewLayout.incomingAvatarViewSize, CGSizeZero)) {
-        needsAvatar = NO;
+        needsAvatar = YES;
     }
 
     id<JSQMessageAvatarImageDataSource> avatarImageDataSource = nil;
